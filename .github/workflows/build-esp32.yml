@@ -1,29 +1,43 @@
-name: Build ArduPilot ESP32
+name: Build ArduPilot ESP32 Firmware
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger with a button in GitHub
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout ArduPilot
         uses: actions/checkout@v4
+        with:
+          repository: ArduPilot/ardupilot
+          ref: master
+          submodules: recursive
 
-      - name: Clone ArduPilot
+      - name: Install System Dependencies
         run: |
-          git clone --depth 1 https://github.com/ArduPilot/ardupilot.git
-          cd ardupilot
-          git submodule update --init --recursive
+          sudo apt-get update
+          sudo apt-get install -y git wget flex bison gperf cmake ninja-build ccache libffi-dev libssl-dev dfu-util python3-pip
 
-      - name: Install dependencies
+      - name: Setup ESP-IDF
         run: |
-          cd ardupilot
-          Tools/environment_install/install-prereqs-ubuntu.sh -y
+          ./Tools/scripts/esp32_get_idf.sh
+          cd modules/esp_idf
+          ./install.sh
+          . ./export.sh
 
-      - name: Build ESP32
+      - name: Configure and Build ArduCopter
         run: |
-          cd ardupilot
-          ./waf configure --board esp32
+          . modules/esp_idf/export.sh
+          ./waf configure
+          ./waf configure --board=esp32buzz
           ./waf copter
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ardupilot-esp32-binaries
+          path: |
+            build/esp32buzz/esp-idf_build/bootloader/bootloader.bin
+            build/esp32buzz/esp-idf_build/partition_table/partition-table.bin
+            build/esp32buzz/esp-idf_build/ardupilot.bin
