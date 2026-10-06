@@ -5,22 +5,24 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout ArduPilot
-        uses: actions/checkout@v4
-        with:
-          repository: ArduPilot/ardupilot
-          ref: master
-          submodules: recursive
-
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git wget flex bison gperf cmake ninja-build ccache libffi-dev libssl-dev dfu-util python3-pip
+          sudo apt-get install -y git wget flex bison gperf cmake ninja-build ccache libffi-dev libssl-dev dfu-util python3 python3-pip python3-setuptools
+          pip3 install --user future pymavlink "empy==3.3.4" pexpect
+
+      - name: Clone ArduPilot
+        run: |
+          git clone --depth 1 https://github.com/ArduPilot/ardupilot.git
+          cd ardupilot
+          git submodule update --init --depth 1 modules/mavlink
+          git submodule update --init --depth 1 modules/waf
 
       - name: Setup ESP-IDF
         run: |
+          cd ardupilot
           ./Tools/scripts/esp32_get_idf.sh
           cd modules/esp_idf
           ./install.sh
@@ -28,6 +30,7 @@ jobs:
 
       - name: Configure and Build ArduCopter
         run: |
+          cd ardupilot
           . modules/esp_idf/export.sh
           ./waf configure
           ./waf configure --board=esp32buzz
@@ -38,6 +41,7 @@ jobs:
         with:
           name: ardupilot-esp32-binaries
           path: |
-            build/esp32buzz/esp-idf_build/bootloader/bootloader.bin
-            build/esp32buzz/esp-idf_build/partition_table/partition-table.bin
-            build/esp32buzz/esp-idf_build/ardupilot.bin
+            ardupilot/build/esp32buzz/esp-idf_build/bootloader/bootloader.bin
+            ardupilot/build/esp32buzz/esp-idf_build/partition_table/partition-table.bin
+            ardupilot/build/esp32buzz/esp-idf_build/ardupilot.bin
+            ardupilot/build/esp32buzz/esp-idf_build/ota_data_initial.bin
