@@ -11,7 +11,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y git wget flex bison gperf cmake ninja-build ccache libffi-dev libssl-dev dfu-util python3 python3-pip python3-setuptools
-          pip3 install --user future pymavlink "empy==3.3.4" pexpect
 
       - name: Clone ArduPilot
         run: |
@@ -32,6 +31,8 @@ jobs:
         run: |
           cd ardupilot
           . modules/esp_idf/export.sh
+          # Install build dependencies inside the ESP-IDF Python environment
+          python3 -m pip install "empy==3.3.4" future pymavlink pexpect
           ./waf configure
           ./waf configure --board=esp32buzz
           ./waf copter
@@ -44,4 +45,5 @@ jobs:
             ardupilot/build/esp32buzz/esp-idf_build/bootloader/bootloader.bin
             ardupilot/build/esp32buzz/esp-idf_build/partition_table/partition-table.bin
             ardupilot/build/esp32buzz/esp-idf_build/ardupilot.bin
-            ardupilot/build/esp32buzz/esp-idf_build/ota_data_initial.bin
+            ardupilot/build/esp32buzz/esp-idf_build/**/*.bin
+          if-no-files-found: warn
